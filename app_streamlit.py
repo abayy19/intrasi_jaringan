@@ -207,10 +207,13 @@ if menu == "📁 Prediksi via Upload CSV":
         df = pd.read_csv(file_upload)
         df.columns = df.columns.str.strip()
 
-        # Hapus kolom label jika ada
-        for kol in ["Label", "label", "Attack Type", "attack type"]:
-            if kol in df.columns:
-                df.drop(columns=[kol], inplace=True)
+        # Hapus SEMUA kolom yang mengandung kata label atau asli
+        kolom_hapus = [k for k in df.columns if any(
+            kata in k.lower() for kata in ["label", "asli", "attack type", "prediksi"]
+)]
+if kolom_hapus:
+    df.drop(columns=kolom_hapus, inplace=True)
+    st.info(f"Kolom dihapus otomatis: {kolom_hapus}")
 
         # Info file
         col_f1, col_f2, col_f3 = st.columns(3)
