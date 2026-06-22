@@ -15,7 +15,7 @@ import os
 
 # ─── Konfigurasi Halaman ──────────────────────────────────────
 st.set_page_config(
-    page_title="Deteksi Intrusi Jaringan",
+    page_title="Klasifikasi Intrusi Jaringan Menggunakan Algoritma XGBoost",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -64,8 +64,8 @@ st.markdown("""
 # ─── Header ───────────────────────────────────────────────────
 st.markdown("""
 <div class="main-header">
-    <h1>🛡️ Sistem Deteksi Intrusi Jaringan</h1>
-    <p>Berbasis Algoritma XGBoost pada Dataset CICIDS2017</p>
+    <h1>🛡️ Klasifikasi Intrusi Jaringan Menggunakan Algoritma XGBoost</h1>
+    <p>Deteksi Trafik Normal dan Serangan Port Scanning pada Dataset CICIDS2017</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -292,7 +292,7 @@ with tab3:
 st.markdown("---")
 st.markdown(
     "<div style='text-align:center; color:#888; font-size:0.85rem;'>"
-    "Sistem Deteksi Intrusi Jaringan | XGBoost + CICIDS2017 | Skripsi 2024"
+    "Klasifikasi Intrusi Jaringan Menggunakan Algoritma XGBoost | Skripsi 2025"
     "</div>",
     unsafe_allow_html=True
 )
