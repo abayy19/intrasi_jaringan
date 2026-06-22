@@ -1,3 +1,4 @@
+cat > /mnt/user-data/outputs/app_streamlit.py << 'PYEOF'
 # ============================================================
 # APLIKASI KLASIFIKASI INTRUSI JARINGAN
 # Algoritma XGBoost | Dataset CICIDS2017
@@ -19,25 +20,15 @@ st.set_page_config(
 # ── Custom CSS ──────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Header utama */
     .header-box {
         background: linear-gradient(135deg, #1a237e, #283593);
         padding: 2rem 2.5rem;
         border-radius: 12px;
         margin-bottom: 1.5rem;
     }
-    .header-box h1 {
-        color: white;
-        font-size: 2rem;
-        margin: 0 0 0.3rem 0;
-    }
-    .header-box p {
-        color: #90CAF9;
-        margin: 0;
-        font-size: 1rem;
-    }
+    .header-box h1 { color: white; font-size: 2rem; margin: 0 0 0.3rem 0; }
+    .header-box p  { color: #90CAF9; margin: 0; font-size: 1rem; }
 
-    /* Card info */
     .info-card {
         background: #F8F9FF;
         border: 1px solid #E3E8FF;
@@ -47,7 +38,6 @@ st.markdown("""
         margin-bottom: 1rem;
     }
 
-    /* Hasil Normal */
     .hasil-normal {
         background: #E8F5E9;
         border: 2px solid #43A047;
@@ -58,7 +48,6 @@ st.markdown("""
     .hasil-normal h2 { color: #1B5E20; margin: 0 0 0.5rem 0; }
     .hasil-normal p  { color: #2E7D32; margin: 0; }
 
-    /* Hasil Attack */
     .hasil-attack {
         background: #FFEBEE;
         border: 2px solid #E53935;
@@ -69,25 +58,11 @@ st.markdown("""
     .hasil-attack h2 { color: #B71C1C; margin: 0 0 0.5rem 0; }
     .hasil-attack p  { color: #C62828; margin: 0; }
 
-    /* Metric card */
     [data-testid="metric-container"] {
         background: #F0F4FF;
         border: 1px solid #C5CAE9;
         border-radius: 10px;
         padding: 0.8rem 1rem;
-    }
-
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background: #1a237e;
-    }
-    [data-testid="stSidebar"] * {
-        color: white !important;
-    }
-    [data-testid="stSidebar"] .stMarkdown h3 {
-        color: #90CAF9 !important;
-        border-bottom: 1px solid #3949AB;
-        padding-bottom: 0.5rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -119,7 +94,6 @@ with st.sidebar:
     - ✅ Normal Traffic
     - 🚨 Port Scanning
     """)
-
     st.markdown("---")
     st.markdown("### 📊 Hasil Training")
     st.markdown("""
@@ -128,7 +102,6 @@ with st.sidebar:
     - Recall    : **100%**
     - F1-Score  : **100%**
     """)
-
     st.markdown("---")
     st.markdown("### 📌 Cara Penggunaan")
     st.markdown("""
@@ -151,9 +124,9 @@ try:
     model = load_model()
     fitur_model = model.get_booster().feature_names
 except Exception as e:
-    st.error(f"❌ **Model gagal dimuat!**")
+    st.error("❌ **Model gagal dimuat!**")
     st.code(str(e))
-    st.warning("Pastikan file **xgboost_cicids2017.json** ada di folder yang sama dengan file app ini.")
+    st.warning("Pastikan file **xgboost_cicids2017.json** ada di folder yang sama.")
     st.stop()
 
 # ── Status model ────────────────────────────────────────────
@@ -189,12 +162,11 @@ if menu == "📁 Prediksi via Upload CSV":
     <div class="info-card">
     <b>📋 Ketentuan file CSV:</b><br>
     • File berisi data trafik jaringan<br>
-    • Tidak perlu ada kolom label (akan diabaikan jika ada)<br>
+    • Kolom label akan dihapus otomatis jika ada<br>
     • Nama kolom harus sesuai fitur dataset CICIDS2017
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Komponen upload ─────────────────────────────────────
     file_upload = st.file_uploader(
         label="Klik atau seret file CSV ke sini",
         type=["csv"],
@@ -207,13 +179,14 @@ if menu == "📁 Prediksi via Upload CSV":
         df = pd.read_csv(file_upload)
         df.columns = df.columns.str.strip()
 
-        # Hapus SEMUA kolom yang mengandung kata label atau asli
-kolom_hapus = [k for k in df.columns if any(
-    kata in k.lower() for kata in ["label", "asli", "attack type", "prediksi"]
-)]
-if kolom_hapus:
-    df.drop(columns=kolom_hapus, inplace=True)
-    st.info(f"Kolom dihapus otomatis: {kolom_hapus}")
+        # Hapus semua kolom yang mengandung kata label / asli / prediksi
+        kolom_hapus = [
+            k for k in df.columns
+            if any(kata in k.lower() for kata in ["label", "asli", "prediksi", "attack type"])
+        ]
+        if kolom_hapus:
+            df.drop(columns=kolom_hapus, inplace=True)
+            st.info(f"Kolom non-fitur dihapus otomatis: {kolom_hapus}")
 
         # Info file
         col_f1, col_f2, col_f3 = st.columns(3)
@@ -226,33 +199,38 @@ if kolom_hapus:
 
         st.markdown("")
 
-        # Tombol prediksi
         if st.button("🔍 Jalankan Prediksi", type="primary", use_container_width=True):
 
             with st.spinner("⏳ Sedang memproses prediksi..."):
 
-                # Siapkan data sesuai fitur model
+                # Siapkan dataframe sesuai fitur model
+                # index sama dengan df agar panjangnya selalu cocok
                 df_pred = pd.DataFrame(0.0, index=df.index, columns=fitur_model)
+
                 for fitur in fitur_model:
                     if fitur in df.columns:
-                        df_pred[fitur] = pd.to_numeric(df[fitur], errors="coerce").fillna(0)
+                        df_pred[fitur] = pd.to_numeric(
+                            df[fitur], errors="coerce"
+                        ).fillna(0).values
+
+                # Bersihkan nilai inf
                 df_pred = df_pred.replace([np.inf, -np.inf], 0)
 
                 # Prediksi
                 hasil = model.predict(df_pred)
                 proba = model.predict_proba(df_pred)
 
-                # Gabungkan hasil
+                # Tambahkan kolom hasil — panjang dijamin sama
                 df_hasil = df.copy()
                 df_hasil["Prediksi"]       = ["✅ Normal" if p == 1 else "🚨 Attack" for p in hasil]
                 df_hasil["Confidence (%)"] = (np.max(proba, axis=1) * 100).round(2)
 
-            # ── Ringkasan hasil ──────────────────────────────
+            # Ringkasan
             st.markdown("---")
             st.markdown("### 📊 Hasil Prediksi")
 
-            jml_normal = sum(1 for p in hasil if p == 1)
-            jml_attack = sum(1 for p in hasil if p == 0)
+            jml_normal = int(sum(1 for p in hasil if p == 1))
+            jml_attack = int(sum(1 for p in hasil if p == 0))
             pct_normal = jml_normal / len(hasil) * 100
             pct_attack = jml_attack / len(hasil) * 100
 
@@ -262,12 +240,10 @@ if kolom_hapus:
             col_r3.metric("🚨 Attack",   f"{jml_attack:,}", f"{pct_attack:.1f}%",
                           delta_color="inverse")
 
-            # Progress bar proporsi
             st.markdown(f"**Proporsi Normal vs Attack:**")
             st.progress(pct_normal / 100)
             st.caption(f"Normal: {pct_normal:.1f}%  |  Attack: {pct_attack:.1f}%")
 
-            # Tabel hasil
             st.markdown("**Detail hasil prediksi:**")
             st.dataframe(
                 df_hasil[["Prediksi", "Confidence (%)"]].head(100),
@@ -276,7 +252,6 @@ if kolom_hapus:
             if len(df_hasil) > 100:
                 st.caption(f"Menampilkan 100 dari {len(df_hasil):,} data.")
 
-            # Download
             csv_out = df_hasil.to_csv(index=False).encode("utf-8")
             st.download_button(
                 label="⬇️ Download Hasil Prediksi (CSV)",
@@ -287,7 +262,6 @@ if kolom_hapus:
             )
 
     else:
-        # Tampilan saat belum upload
         st.info("⬆️ Silakan upload file CSV di atas untuk memulai prediksi.")
 
 # ============================================================
@@ -299,22 +273,21 @@ else:
 
     st.markdown("""
     <div class="info-card">
-    <b>📋 Petunjuk:</b> Masukkan nilai fitur lalu lintas jaringan di bawah ini, 
+    <b>📋 Petunjuk:</b> Masukkan nilai fitur lalu lintas jaringan di bawah ini,
     lalu klik tombol <b>Prediksi Sekarang</b>.
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Form input ───────────────────────────────────────────
     with st.form("form_manual"):
 
         st.markdown("#### Fitur Utama")
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            dst_port      = st.number_input("Destination Port",       min_value=0,   max_value=65535, value=80)
-            flow_duration = st.number_input("Flow Duration",          min_value=0,   value=1000000)
-            total_fwd     = st.number_input("Total Fwd Packets",      min_value=0,   value=5)
-            total_bwd     = st.number_input("Total Backward Packets", min_value=0,   value=3)
+            dst_port      = st.number_input("Destination Port",       min_value=0, max_value=65535, value=80)
+            flow_duration = st.number_input("Flow Duration",          min_value=0, value=1000000)
+            total_fwd     = st.number_input("Total Fwd Packets",      min_value=0, value=5)
+            total_bwd     = st.number_input("Total Backward Packets", min_value=0, value=3)
 
         with col2:
             flow_bytes    = st.number_input("Flow Bytes/s",           min_value=0.0, value=5000.0,   format="%.2f")
@@ -331,22 +304,21 @@ else:
         st.markdown("#### Fitur Tambahan")
         col4, col5 = st.columns(2)
         with col4:
-            fwd_header_len = st.number_input("Fwd Header Length",     min_value=0,   value=20)
-            init_win_fwd   = st.number_input("Init Win Bytes Forward", min_value=0,   value=65535)
+            fwd_header_len = st.number_input("Fwd Header Length",       min_value=0, value=20)
+            init_win_fwd   = st.number_input("Init Win Bytes Forward",   min_value=0, value=65535)
         with col5:
-            init_win_bwd   = st.number_input("Init Win Bytes Backward", min_value=0, value=65535)
-            act_data_pkt   = st.number_input("Act Data Pkt Fwd",       min_value=0,  value=1)
+            init_win_bwd   = st.number_input("Init Win Bytes Backward",  min_value=0, value=65535)
+            act_data_pkt   = st.number_input("Act Data Pkt Fwd",         min_value=0, value=1)
 
-        # Tombol submit di dalam form
         submitted = st.form_submit_button(
             "🔍 Prediksi Sekarang",
             type="primary",
             use_container_width=True
         )
 
-    # ── Proses prediksi ──────────────────────────────────────
     if submitted:
 
+        # Buat dataframe kosong sesuai fitur model
         input_df = pd.DataFrame(0.0, index=[0], columns=fitur_model)
 
         nilai_input = {
@@ -380,19 +352,18 @@ else:
         p_normal   = proba[1] * 100
         p_attack   = proba[0] * 100
 
-        # ── Tampilkan hasil ──────────────────────────────────
         st.markdown("---")
         st.markdown("### 🎯 Hasil Prediksi")
 
         if label == "Normal":
-            st.markdown(f"""
+            st.markdown("""
             <div class="hasil-normal">
                 <h2>✅ NORMAL TRAFFIC</h2>
                 <p>Lalu lintas jaringan terdeteksi <b>aman</b> dan tidak mengandung serangan</p>
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown(f"""
+            st.markdown("""
             <div class="hasil-attack">
                 <h2>🚨 TERDETEKSI SERANGAN!</h2>
                 <p>Lalu lintas jaringan teridentifikasi sebagai <b>Port Scanning Attack</b></p>
@@ -401,7 +372,6 @@ else:
 
         st.markdown("")
 
-        # Confidence bar
         col_c1, col_c2 = st.columns([2, 1])
         with col_c1:
             st.markdown(f"**Tingkat Keyakinan Model: {confidence:.2f}%**")
@@ -409,7 +379,6 @@ else:
         with col_c2:
             st.metric("Prediksi", label)
 
-        # Probabilitas detail
         st.markdown("**Probabilitas per kelas:**")
         col_p1, col_p2 = st.columns(2)
         col_p1.metric("✅ Normal Traffic", f"{p_normal:.2f}%")
@@ -426,3 +395,5 @@ st.markdown(
     "</p>",
     unsafe_allow_html=True
 )
+PYEOF
+echo "Selesai"
