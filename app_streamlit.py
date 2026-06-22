@@ -59,86 +59,55 @@ st.divider()
 # ============================================================
 # CARA 1: UPLOAD FILE CSV
 # ============================================================
-if cara == "📁 Upload File CSV":
+if st.button("🔍 Jalankan Prediksi", type="primary", use_container_width=True):
 
-    st.markdown("### Upload File CSV")
-    st.markdown("""
-    **Ketentuan file CSV:**
-    - File berisi data trafik jaringan (tanpa kolom label)
-    - Nama kolom harus sesuai dengan fitur yang digunakan saat training
-    """)
+    with st.spinner("Sedang memproses prediksi..."):
 
-    file = st.file_uploader("Pilih file CSV", type=["csv"])
+        # Sesuaikan kolom dengan fitur model
+        df_pred = pd.DataFrame(0.0, index=df.index, columns=fitur_model)
+        for fitur in fitur_model:
+            if fitur in df.columns:
+                df_pred[fitur] = pd.to_numeric(df[fitur], errors="coerce").fillna(0)
 
-    if file is not None:
-        # Baca file
-        df = pd.read_csv(file)
-        df.columns = df.columns.str.strip()
+        # Bersihkan nilai inf
+        df_pred = df_pred.replace([np.inf, -np.inf], 0)
 
-        # Hapus kolom label jika ada (jaga-jaga)
-        for kolom_label in ["Label", "label", "Attack Type", "attack type"]:
-            if kolom_label in df.columns:
-                df.drop(columns=[kolom_label], inplace=True)
+        # Prediksi
+        hasil = model.predict(df_pred)
+        proba = model.predict_proba(df_pred)
 
-        st.success(f"✅ File berhasil dibaca: **{len(df):,} baris**, **{df.shape[1]} kolom**")
-        st.dataframe(df.head(5), use_container_width=True)
-        st.caption("Menampilkan 5 baris pertama")
+        # Tambah kolom hasil ke df asli
+        df_hasil = df.copy()
+        df_hasil["Prediksi"]       = ["Normal" if p == 1 else "Attack" for p in hasil]
+        df_hasil["Confidence (%)"] = (np.max(proba, axis=1) * 100).round(2)
 
-        # Tombol prediksi
-        if st.button("🔍 Jalankan Prediksi", type="primary", use_container_width=True):
+    # ── Tampilkan ringkasan ──
+    st.divider()
+    st.markdown("### Hasil Prediksi")
 
-            with st.spinner("Sedang memproses prediksi..."):
+    jml_normal = (df_hasil["Prediksi"] == "Normal").sum()
+    jml_attack = (df_hasil["Prediksi"] == "Attack").sum()
 
-                # Sesuaikan kolom dengan fitur model
-                df_pred = pd.DataFrame(columns=fitur_model)
-                for fitur in fitur_model:
-                    if fitur in df.columns:
-                        df_pred[fitur] = df[fitur]
-                    else:
-                        df_pred[fitur] = 0  # isi 0 jika kolom tidak ada
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Data", f"{len(df_hasil):,}")
+    col2.metric("✅ Normal", f"{jml_normal:,}")
+    col3.metric("🚨 Attack", f"{jml_attack:,}")
 
-                # Bersihkan data
-                df_pred = df_pred.apply(pd.to_numeric, errors="coerce").fillna(0)
-                df_pred = df_pred.replace([np.inf, -np.inf], 0)
+    st.dataframe(
+        df_hasil[["Prediksi", "Confidence (%)"]].head(100),
+        use_container_width=True
+    )
+    if len(df_hasil) > 100:
+        st.caption(f"Menampilkan 100 dari {len(df_hasil):,} baris.")
 
-                # Prediksi
-                hasil = model.predict(df_pred)
-                proba = model.predict_proba(df_pred)
-
-                # Buat kolom hasil
-                df["Prediksi"]       = ["Normal" if p == 1 else "Attack" for p in hasil]
-                df["Confidence (%)"] = (np.max(proba, axis=1) * 100).round(2)
-
-            # ── Tampilkan ringkasan ──
-            st.divider()
-            st.markdown("### Hasil Prediksi")
-
-            jml_normal = (df["Prediksi"] == "Normal").sum()
-            jml_attack = (df["Prediksi"] == "Attack").sum()
-
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Total Data", f"{len(df):,}")
-            col2.metric("✅ Normal", f"{jml_normal:,}")
-            col3.metric("🚨 Attack", f"{jml_attack:,}")
-
-            # Tabel hasil (100 baris pertama)
-            st.dataframe(
-                df[["Prediksi", "Confidence (%)"]].head(100),
-                use_container_width=True
-            )
-            if len(df) > 100:
-                st.caption(f"Menampilkan 100 dari {len(df):,} baris. Download untuk data lengkap.")
-
-            # Tombol download
-            csv_hasil = df.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="⬇️ Download Hasil Prediksi (CSV)",
-                data=csv_hasil,
-                file_name="hasil_prediksi.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-
+    csv_hasil = df_hasil.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="⬇️ Download Hasil Prediksi (CSV)",
+        data=csv_hasil,
+        file_name="hasil_prediksi.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
 # ============================================================
 # CARA 2: INPUT MANUAL
 # ============================================================
