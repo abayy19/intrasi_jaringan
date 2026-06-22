@@ -210,8 +210,8 @@ if menu == "📁 Prediksi via Upload CSV":
         # Hapus SEMUA kolom yang mengandung kata label atau asli
         kolom_hapus = [k for k in df.columns if any(
             kata in k.lower() for kata in ["label", "asli", "attack type", "prediksi"]
-)]
-if kolom_hapus:
+    )]
+    if kolom_hapus:
     df.drop(columns=kolom_hapus, inplace=True)
     st.info(f"Kolom dihapus otomatis: {kolom_hapus}")
 
