@@ -1,4 +1,3 @@
-cat > /mnt/user-data/outputs/app_streamlit.py << 'PYEOF'
 # ============================================================
 # APLIKASI KLASIFIKASI INTRUSI JARINGAN
 # Algoritma XGBoost | Dataset CICIDS2017
@@ -391,9 +390,7 @@ st.markdown("---")
 st.markdown(
     "<p style='text-align:center; color:#888; font-size:0.85rem'>"
     "Klasifikasi Intrusi Jaringan Menggunakan Algoritma XGBoost &nbsp;|&nbsp; "
-    "Dataset CICIDS2017 &nbsp;|&nbsp; Skripsi 2025"
+    "Dataset CICIDS2017 &nbsp;"
     "</p>",
     unsafe_allow_html=True
 )
-PYEOF
-echo "Selesai"
